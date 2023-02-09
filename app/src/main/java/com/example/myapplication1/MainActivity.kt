@@ -12,6 +12,8 @@ import androidx.activity.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -21,6 +23,7 @@ import com.example.myapplication1.domain.Book
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -34,12 +37,14 @@ class MainActivity : AppCompatActivity() {
         val viewModel: MainViewModel by viewModels()
 
         binding.mainRecycler.layoutManager = LinearLayoutManager(this@MainActivity)
+        binding.mainRecycler.adapter = MainRecyclerAdapter(BookComparator)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { currentUiState ->
-                    binding.mainRecycler.adapter = MainRecyclerAdapter(currentUiState.bookList)
-                    binding.mainRecycler.adapter!!.notifyDataSetChanged()
+                viewModel.uiState.collectLatest { currentUiState ->
+                    currentUiState.pagingData?.let {
+                        (binding.mainRecycler.adapter!! as MainRecyclerAdapter).submitData(it)
+                    }
                 }
             }
         }
@@ -52,7 +57,8 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-class MainRecyclerAdapter(private val bookList: List<Book>) : RecyclerView.Adapter<MainRecyclerAdapter.ViewHolder>() {
+class MainRecyclerAdapter(diffCallback: DiffUtil.ItemCallback<Book>) :
+    PagingDataAdapter<Book, MainRecyclerAdapter.ViewHolder>(diffCallback) {
 
     inner class ViewHolder(val binding: MainRecyclerItemBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -61,13 +67,29 @@ class MainRecyclerAdapter(private val bookList: List<Book>) : RecyclerView.Adapt
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val binding = holder.binding
+        val item = getItem(position)
+        Log.d(position.toString(), item?.title.toString())
 
-        Glide.with(binding.imageView.context)
-            .load(bookList[position].image)
+        Glide.with(binding.imageView)
+            .load(item?.image)
             .into(binding.imageView)
 
-        binding.textView.text = bookList[position].title
+        binding.textView.text = item?.title
     }
 
-    override fun getItemCount(): Int = bookList.size
+    override fun getItemViewType(position: Int): Int {
+        return position
+    }
+
+
+}
+
+object BookComparator : DiffUtil.ItemCallback<Book>() {
+    override fun areItemsTheSame(oldItem: Book, newItem: Book): Boolean {
+        return oldItem.title == newItem.title
+    }
+
+    override fun areContentsTheSame(oldItem: Book, newItem: Book): Boolean {
+        return oldItem == newItem
+    }
 }

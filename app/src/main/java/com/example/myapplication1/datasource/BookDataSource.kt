@@ -7,7 +7,8 @@ import com.example.myapplication1.network.BookNetworkService
 import com.example.myapplication1.network.NetworkBookContainer
 import com.example.myapplication1.network.asDomainModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -17,31 +18,27 @@ class BookRemoteDataSource @Inject constructor(
     private val bookNetworkService: BookNetworkService,
     private val ioDispatcher: CoroutineDispatcher
 ) {
-    suspend fun getSearchResult(searchText: String): List<Book> {
-        var bookList: List<Book> = listOf()
-
-        withContext(ioDispatcher) {
-            bookNetworkService.getSearchBookList(
-                BuildConfig.NAVER_CLIENT_ID,
-                BuildConfig.NAVER_CLIENT_SECRET,
-                100,
-                searchText
-            ).enqueue( object : Callback<NetworkBookContainer> {
-                override fun onResponse(
-                    call: Call<NetworkBookContainer>,
-                    response: Response<NetworkBookContainer>
-                ) {
-                    bookList = response.body()!!.asDomainModel()
-                    Log.d("BookRemoteDataSource", bookList.toString())
+    fun getSearchResult(searchText: String, page: Int): Flow<List<Book>> = callbackFlow {
+        bookNetworkService.getSearchBookList(
+            BuildConfig.NAVER_CLIENT_ID,
+            BuildConfig.NAVER_CLIENT_SECRET,
+            page * 10,
+            searchText
+        ).enqueue( object : Callback<NetworkBookContainer> {
+            override fun onResponse(
+                call: Call<NetworkBookContainer>,
+                response: Response<NetworkBookContainer>
+            ) {
+                Log.d("djgopw", "jg")
+                if (response.isSuccessful) {
+                    response.body()?.asDomainModel()?.let { trySend(it).isSuccess }
                 }
+            }
 
-                override fun onFailure(call: Call<NetworkBookContainer>, t: Throwable) {
-                    Log.d("BookRemoteDataSource", "fail")
-                }
-            })
-
-        }
-        Log.d("BookRemoteDataSource", bookList.toString())
-        return bookList
-    }
+            override fun onFailure(call: Call<NetworkBookContainer>, t: Throwable) {
+                Log.d("djgopw", "jgrg")
+            }
+        })
+        awaitClose()
+    }.flowOn(ioDispatcher)
 }

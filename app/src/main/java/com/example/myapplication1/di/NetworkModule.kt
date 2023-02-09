@@ -1,6 +1,7 @@
 package com.example.myapplication1.di
 
 import com.example.myapplication1.datasource.BookRemoteDataSource
+import com.example.myapplication1.datasource.MainPagingSource
 import com.example.myapplication1.network.BookNetworkService
 import com.example.myapplication1.repository.BookRepository
 import dagger.Module
@@ -30,8 +31,13 @@ object NetworkModule {
     fun providesBookRemoteDataSource(bookNetworkService: BookNetworkService) =
         BookRemoteDataSource(bookNetworkService, Dispatchers.IO)
 
-    @Singleton
+    /*@Singleton
     @Provides
     fun providesBookRepository(bookRemoteDataSource: BookRemoteDataSource) =
-        BookRepository(bookRemoteDataSource)
+        BookRepository(bookRemoteDataSource)*/
+
+    @Singleton
+    @Provides
+    fun providesBookRepository(bookNetworkService: BookNetworkService) =
+        BookRepository(bookNetworkService)
 }

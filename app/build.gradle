@@ -46,6 +46,11 @@ android {
 
 dependencies {
 
+    /*Paging*/
+    def paging_version = "3.1.1"
+
+    implementation "androidx.paging:paging-runtime:$paging_version"
+
     /*Hilt*/
     implementation "com.google.dagger:hilt-android:2.44"
     kapt "com.google.dagger:hilt-compiler:2.44"
